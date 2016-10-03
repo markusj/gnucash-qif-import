@@ -38,8 +38,8 @@ def lookup_account(root, name):
 
 
 def add_transaction(book, item, currency):
-    logging.info('Adding transaction for account "%s" (%s %s)..', item.account, item.split_amount,
-                 currency.get_mnemonic())
+    logging.info('Adding transaction ...')
+    
     root = book.get_root_account()
     acc = lookup_account(root, item.account)
 
@@ -50,19 +50,27 @@ def add_transaction(book, item, currency):
     tx.SetDatePostedTS(item.date)
     tx.SetDescription(item.memo)
 
-    s1 = Split(book)
-    s1.SetParent(tx)
-    s1.SetAccount(acc)
-    amount = int(Decimal(item.split_amount.replace(',', '.')) * currency.get_fraction())
-    s1.SetValue(GncNumeric(amount, currency.get_fraction()))
-    s1.SetAmount(GncNumeric(amount, currency.get_fraction()))
-
-    acc2 = lookup_account(root, item.split_category)
-    s2 = Split(book)
-    s2.SetParent(tx)
-    s2.SetAccount(acc2)
-    s2.SetValue(GncNumeric(amount * -1, currency.get_fraction()))
-    s2.SetAmount(GncNumeric(amount * -1, currency.get_fraction()))
+    balance = 0
+    
+    for split in item.splits:
+        logging.info('... "%s" (%s %s)..', split.category, split.amount,
+            currency.get_mnemonic())
+        s = Split(book)
+        s.SetParent(tx)
+        sAcc = lookup_account(root, split.category)
+        s.SetAccount(sAcc)
+        amount = int(Decimal(split.amount.replace(',', '.')) * currency.get_fraction())
+        balance += amount
+        s.SetValue(GncNumeric(amount * -1, currency.get_fraction()))
+        s.SetAmount(GncNumeric(amount * -1, currency.get_fraction()))
+    
+    logging.info('... "%s" (%#.2f %s)..', item.account, balance / currency.get_fraction(),
+         currency.get_mnemonic())
+    s = Split(book)
+    s.SetParent(tx)
+    s.SetAccount(acc)
+    s.SetValue(GncNumeric(balance, currency.get_fraction()))
+    s.SetAmount(GncNumeric(balance, currency.get_fraction()))
 
     tx.CommitEdit()
 
@@ -135,11 +143,11 @@ def write_transactions_to_gnucash(gnucash_file, currency, all_items, dry_run=Fal
     imported_items = set()
     for item in all_items:
         if date_from and item.date < date_from:
-            logging.info('Skipping entry %s (%s)', item.date.strftime('%Y-%m-%d'), item.split_amount)
+            logging.info('Skipping entry %s (%s)', item.date.strftime('%Y-%m-%d'), item.memo)
             continue
         if item.as_tuple() in imported_items:
             logging.info('Skipping entry %s (%s) --- already imported!', item.date.strftime('%Y-%m-%d'),
-                         item.split_amount)
+                         item.memo)
             continue
         add_transaction(book, item, currency)
         imported_items.add(item.as_tuple())

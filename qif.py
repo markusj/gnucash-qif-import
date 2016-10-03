@@ -13,6 +13,19 @@ Original source from http://code.activestate.com/recipes/306103-quicken-qif-file
 import sys
 import datetime
 
+class QifSplit:
+    def __init__(self):
+        self.order = [
+            'category',
+            'memo',
+            'amount',
+            ]
+        self.category = None
+        self.memo = None
+        self.amount = None
+    
+    def as_tuple(self):
+        return tuple([self.__dict__[field] for field in self.order])
 
 class QifItem:
 
@@ -27,9 +40,6 @@ class QifItem:
             'memo',
             'address',
             'category',
-            'split_category',
-            'split_memo',
-            'split_amount',
         ]
         self.type = None
         self.date = None
@@ -41,18 +51,13 @@ class QifItem:
         self.memo = None
         self.address = None
         self.category = None
-        self.split_category = None
-        self.split_memo = None
-        self.split_amount = None
+        self.splits = [ ]
 
     def as_tuple(self):
-        return tuple([self.__dict__[field] for field in self.order])
-
-    def __str__(self):
-        titles = ','.join(self.order)
-        tmpstring = ','.join([str(self.__dict__[field]) for field in self.order])
-        tmpstring = tmpstring.replace('None', '')
-        return titles + '\n' + tmpstring
+        splitList = [ split.as_tuple() for split in self.splits ]
+        fieldList = [ self.__dict__[field] for field in self.order ]
+        fieldList.append(tuple(splitList))        
+        return tuple(fieldList)
 
 
 def parse_qif(infile):
@@ -64,6 +69,8 @@ def parse_qif(infile):
     account = None
     items = []
     curItem = QifItem()
+    curSplit = None # should be initialized on first split
+    
     for line in infile:
         firstchar = line[0]
         data = line[1:].strip()
@@ -92,11 +99,13 @@ def parse_qif(infile):
         elif firstchar == 'L':
             curItem.category = data
         elif firstchar == 'S':
-            curItem.split_category = data
+            curSplit = QifSplit()
+            curItem.splits.append(curSplit)
+            curSplit.category = data
         elif firstchar == 'E':
-            curItem.split_memo = data
+            curSplit.memo = data
         elif firstchar == '$':
-            curItem.split_amount = data
+            curSplit.amount = data
         elif firstchar == 'N':
             if curItem.type == 'Account':
                 account = data
