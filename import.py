@@ -65,7 +65,7 @@ def add_transaction(book, item, currency):
         s.SetValue(GncNumeric(amount, currency.get_fraction()))
         s.SetAmount(GncNumeric(amount, currency.get_fraction()))
         
-        logging.info('    "%s" (%#.2f %s)', split.category, amount, currency.get_mnemonic())
+        logging.info('    "%s" (%#.2f %s)', split.category, float(amount) / currency.get_fraction(), currency.get_mnemonic())
     
     s = Split(book)
     s.SetParent(tx)
