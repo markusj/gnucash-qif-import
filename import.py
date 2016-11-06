@@ -38,7 +38,7 @@ def lookup_account(root, name):
 
 
 def add_transaction(book, item, currency):
-    logging.info('Adding transaction ...')
+    logging.info('Adding transaction:')
     
     root = book.get_root_account()
     acc = lookup_account(root, item.account)
@@ -53,24 +53,29 @@ def add_transaction(book, item, currency):
     balance = 0
     
     for split in item.splits:
-        logging.info('... "%s" (%s %s)..', split.category, split.amount,
-            currency.get_mnemonic())
         s = Split(book)
         s.SetParent(tx)
+        
         sAcc = lookup_account(root, split.category)
         s.SetAccount(sAcc)
-        amount = int(Decimal(split.amount.replace(',', '.')) * currency.get_fraction())
-        balance += amount
-        s.SetValue(GncNumeric(amount * -1, currency.get_fraction()))
-        s.SetAmount(GncNumeric(amount * -1, currency.get_fraction()))
+        
+        amount = -1 * int(Decimal(split.amount.replace(',', '.')) * currency.get_fraction())
+        balance -= amount
+        
+        s.SetValue(GncNumeric(amount, currency.get_fraction()))
+        s.SetAmount(GncNumeric(amount, currency.get_fraction()))
+        
+        logging.info('    "%s" (%#.2f %s)', split.category, amount, currency.get_mnemonic())
     
-    logging.info('... "%s" (%#.2f %s)..', item.account, balance / currency.get_fraction(),
-         currency.get_mnemonic())
     s = Split(book)
     s.SetParent(tx)
     s.SetAccount(acc)
+    
     s.SetValue(GncNumeric(balance, currency.get_fraction()))
     s.SetAmount(GncNumeric(balance, currency.get_fraction()))
+    
+    logging.info('    "%s" (%#.2f %s)', item.account, float(balance) / currency.get_fraction(),
+         currency.get_mnemonic())
 
     tx.CommitEdit()
 
