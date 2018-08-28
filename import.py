@@ -48,7 +48,12 @@ def add_transaction(book, item, currency):
     tx.SetCurrency(currency)
     tx.SetDateEnteredTS(datetime.datetime.now())
     tx.SetDatePostedTS(item.date)
-    tx.SetDescription(item.memo)
+    
+    if item.payee is None:    
+        tx.SetDescription(item.memo)
+    else:
+        tx.SetDescription(item.payee)
+        tx.SetNotes(item.memo)
 
     balance = 0
     
